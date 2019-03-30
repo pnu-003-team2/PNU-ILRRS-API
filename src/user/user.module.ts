@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
+import { UserView } from './view/user.view';
 
 @Module({
   imports: [],
-  controllers: [],
+  controllers: [UserView],
   providers: [],
 })
 export class UserModule {
