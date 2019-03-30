@@ -10,7 +10,7 @@ export class User {
   name: string;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updated_at: Date;
 
   changeName(newName: string) {
     this.name = newName;
