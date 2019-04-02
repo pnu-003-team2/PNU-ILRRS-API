@@ -11,6 +11,7 @@ async function bootstrap() {
   const options = new DocumentBuilder()
     .setTitle('PNU-ILRRS')
     .setDescription('API Application')
+    .addBearerAuth()
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, options);

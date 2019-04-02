@@ -6,7 +6,7 @@ export class User {
   @PrimaryColumn()
   id: string;
 
-  @Column('varchar', { length: 30 })
+  @Column('varchar', { length: 30 , nullable: true})
   name: string;
 
   @UpdateDateColumn()

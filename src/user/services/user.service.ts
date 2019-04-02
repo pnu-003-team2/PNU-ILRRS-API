@@ -1,16 +1,29 @@
-import { Injectable, UnprocessableEntityException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
 import { User } from '../model/user.entity';
+import { JwtPayload } from './interfaces/jwtPayload.interface';
+import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class UserService {
-
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+  ) {
+    function outter() {
+      const title = 'coding everybody';
+      return () => {
+        console.log(title);
+      };
+    }
+    const inner = outter();
+    inner();
+  }
+
+  async getAllUser(): Promise<User[]> {
+    return await this.userRepository.find();
+  }
 
   /**
    * 로그인
@@ -56,7 +69,7 @@ export class UserService {
    * 해당 학번 유저 가져오기
    * @param id - 학번
    */
-  async findOfId(id: string): Promise<User|null> {
+  async findOfId(id: string): Promise<User | null> {
     const user = await this.userRepository.findOne(id);
     return user ? user : null;
   }
@@ -67,7 +80,6 @@ export class UserService {
    */
   async create(id: string): Promise<User> {
     const user = await this.findOfId(id);
-
     if (user) {
       throw new UnprocessableEntityException('user already exists');
     }
@@ -82,6 +94,11 @@ export class UserService {
    * @param user - 유저
    */
   createJWT(user: User): string {
-    return 'token';
+    const userPayload: JwtPayload = { id: user.id };
+    return jwt.sign(userPayload, process.env.TOKEN_SECRETKEY, { expiresIn: '1d' });
+  }
+
+  async validateUser(payload: JwtPayload): Promise<any> {
+    return await this.findOfId(payload.id);
   }
 }
