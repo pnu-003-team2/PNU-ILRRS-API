@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { HttpModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { UserController } from './controllers/user.controller';
@@ -11,6 +11,7 @@ import { JwtStrategy } from './services/jwt.strategy';
     TypeOrmModule.forFeature([
       User,
     ]),
+    HttpModule,
   ],
   controllers: [UserController],
   providers: [UserService, JwtStrategy],

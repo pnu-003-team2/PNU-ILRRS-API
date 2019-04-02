@@ -1,24 +1,20 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { HttpService, Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../model/user.entity';
 import { JwtPayload } from './interfaces/jwtPayload.interface';
 import * as jwt from 'jsonwebtoken';
+import * as querystring from 'querystring';
+import * as cheerio from 'cheerio';
+import { map } from 'rxjs/operators';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly httpService: HttpService,
   ) {
-    function outter() {
-      const title = 'coding everybody';
-      return () => {
-        console.log(title);
-      };
-    }
-    const inner = outter();
-    inner();
   }
 
   async getAllUser(): Promise<User[]> {
@@ -31,18 +27,21 @@ export class UserService {
    * @param password - 비밀번호
    */
   async login(id: string, password: string): Promise<string> {
-    await this.confirmPLMS(id, password);
-    const user = await this.findOfId(id);
-    let jwt;
-
-    if (user) {
-      jwt = this.createJWT(user);
-    } else {
-      const newUser = await this.create(id);
-      jwt = this.createJWT(newUser);
+    const confirmPLMSResult = await this.confirmPLMS(id, password);
+    if (!confirmPLMSResult) {
+      throw new Error('아이디/비밀번호가 맞지 않습니다.');
     }
 
-    return jwt;
+    const user = await this.findOfId(id);
+    let jwtToken;
+    if (user) {
+      jwtToken = this.createJWT(user);
+    } else {
+      const newUser = await this.create(id);
+      jwtToken = this.createJWT(newUser);
+    }
+
+    return jwtToken;
   }
 
   /**
@@ -62,7 +61,37 @@ export class UserService {
    * @param password - 비밀번호
    */
   async confirmPLMS(id: string, password: string): Promise<boolean> {
-    return true;
+    const responseHTML = await this.requestToPLMS(id, password);
+    return this.getCorrectInfoInHTML(responseHTML);
+  }
+
+  /**
+   * PLMS 인증 요청 보내기
+   * @param id - 학번
+   * @param password - 비밀번호
+   */
+  async requestToPLMS(id, password): Promise<string> {
+    const result = await this.httpService.request({
+      method: 'post',
+      url: 'https://onestop.pusan.ac.kr/new_pass/exorgan/exidentify.asp',
+      data: querystring.stringify({
+        dest: 'https://plms.pusan.ac.kr/login/index.php',
+        id,
+        pswd: password,
+      }),
+    });
+
+    return await (result.pipe(map(res => res.data)).toPromise());
+  }
+
+  /**
+   * html에서 인증 결과값 가져오기
+   * @param html - HTML
+   */
+  async getCorrectInfoInHTML(html: string) {
+    const htmlSelector = cheerio.load(html);
+    const gbn = htmlSelector('input[name="gbn"]').attr('value');
+    return gbn === 'True';
   }
 
   /**
