@@ -1,4 +1,5 @@
-import { Entity, PrimaryColumn, Column, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import { Course } from '../../course/model/course.entity';
 
 @Entity('user')
 export class User {
@@ -8,6 +9,13 @@ export class User {
 
   @Column('varchar', { length: 30 , nullable: true})
   name: string;
+
+  @ManyToMany(type => Course, course => course.users)
+  @JoinTable({name: 'user_course_join'})
+  courses: Course[];
+
+  @CreateDateColumn()
+  created_at: Date;
 
   @UpdateDateColumn()
   updated_at: Date;
