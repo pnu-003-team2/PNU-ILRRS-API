@@ -20,8 +20,7 @@ export class UserController {
   })
   async login(@Body() loginInfoDTO: LoginInfoDTO, @Res() res): Promise<void> {
     const { id, password } = loginInfoDTO;
-    const jwt = await this.userService.login(id, password);
-    return res.status(HttpStatus.OK).json(jwt);
+    return res.status(HttpStatus.OK).json(await this.userService.login(id, password));
   }
 
   @Get('users')

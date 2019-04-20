@@ -6,6 +6,7 @@ import { JwtPayload } from './interfaces/jwtPayload.interface';
 import * as jwt from 'jsonwebtoken';
 import * as querystring from 'querystring';
 import * as cheerio from 'cheerio';
+import moment from 'moment';
 import { map } from 'rxjs/operators';
 
 @Injectable()
@@ -26,22 +27,28 @@ export class UserService {
    * @param id - 학번
    * @param password - 비밀번호
    */
-  async login(id: string, password: string): Promise<string> {
+  async login(id: string, password: string): Promise<any> {
     const confirmPLMSResult = await this.confirmPLMS(id, password);
     if (!confirmPLMSResult) {
       throw new Error('아이디/비밀번호가 맞지 않습니다.');
     }
 
     const user = await this.findOfId(id);
+    const expiresIn = '1d';
     let jwtToken;
     if (user) {
-      jwtToken = this.createJWT(user);
+      jwtToken = this.createJWT(user, expiresIn);
     } else {
       const newUser = await this.create(id);
-      jwtToken = this.createJWT(newUser);
+      jwtToken = this.createJWT(newUser, expiresIn);
     }
 
-    return jwtToken;
+    const expireDate = moment().add(1, 'd');
+
+    return {
+      jwtToken,
+      expireDate,
+    };
   }
 
   /**
@@ -52,7 +59,7 @@ export class UserService {
   async changeName(id: string, newName: string): Promise<void> {
     const user = await this.findOfId(id);
     user.changeName(newName);
-    this.userRepository.save(user);
+    await this.userRepository.save(user);
   }
 
   /**
@@ -112,7 +119,6 @@ export class UserService {
     if (user) {
       throw new UnprocessableEntityException('user already exists');
     }
-
     const newUser = new User();
     newUser.id = id;
     return await this.userRepository.save(newUser);
@@ -122,9 +128,9 @@ export class UserService {
    * JWT 생성
    * @param user - 유저
    */
-  createJWT(user: User): string {
+  createJWT(user: User, expiresIn: string): string {
     const userPayload: JwtPayload = { id: user.id };
-    return jwt.sign(userPayload, process.env.TOKEN_SECRETKEY, { expiresIn: '1d' });
+    return jwt.sign(userPayload, process.env.TOKEN_SECRETKEY, { expiresIn });
   }
 
   async validateUser(payload: JwtPayload): Promise<any> {

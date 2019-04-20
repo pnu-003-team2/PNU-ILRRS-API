@@ -8,7 +8,8 @@ import { CourseInfo } from './interface/CourseInfo';
 export class PlmsService {
   constructor(
     private readonly httpService: HttpService,
-  ) {}
+  ) {
+  }
 
   async getCourses(id: string) {
     const mainPageHTML = await this.getMainPageHTML(id);
@@ -42,14 +43,14 @@ export class PlmsService {
   getCoursesFromMainPage(html: string) {
     const htmlSelector = cheerio.load(html);
     const courseContainer = htmlSelector('ul.my-course-lists.coursemos-layout-0');
-    if (this.isEmptyInCourseContainer(courseContainer)) {
+    if (PlmsService.isEmptyInCourseContainer(courseContainer)) {
       return [];
     }
 
     return this.getCoursesInCourseContainer(htmlSelector, courseContainer);
   }
 
-  isEmptyInCourseContainer(courseContainer: Cheerio) {
+  static isEmptyInCourseContainer(courseContainer: Cheerio): boolean {
     const emptyIndicator = courseContainer.find('li.nocourse.well');
     return (emptyIndicator.length === 1);
   }
@@ -61,7 +62,7 @@ export class PlmsService {
       const courseInfo = htmlSelector(elem).find('div.course-title');
       const nameAndCode = courseInfo.find('h3').text();
       const professor = courseInfo.find('p.prof').text();
-      const { name, code } = this.extractNameAndCode(nameAndCode);
+      const { name, code } = PlmsService.extractNameAndCode(nameAndCode);
       const returnCourse = { name, code, professor };
       courses.push(returnCourse);
     });
@@ -69,7 +70,7 @@ export class PlmsService {
     return courses;
   }
 
-  extractNameAndCode(nameAndCodeString) {
+  static extractNameAndCode(nameAndCodeString): any {
     const name = nameAndCodeString.split(' ')[0];
     const code = nameAndCodeString.split(' ')[1].replace('(', '').replace(')', '');
     return { name, code };
