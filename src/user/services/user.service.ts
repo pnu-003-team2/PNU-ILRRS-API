@@ -8,14 +8,20 @@ import * as querystring from 'querystring';
 import * as cheerio from 'cheerio';
 import moment from 'moment';
 import { map } from 'rxjs/operators';
+import { CourseService } from '../../course/services/course.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly courseService: CourseService,
     private readonly httpService: HttpService,
   ) {
+  }
+
+  async getUser(id: string): Promise<User> {
+    return await this.userRepository.findOne(id);
   }
 
   async getAllUser(): Promise<User[]> {
@@ -121,6 +127,7 @@ export class UserService {
     }
     const newUser = new User();
     newUser.id = id;
+    newUser.courses = await this.courseService.makeUserCourse(id);
     return await this.userRepository.save(newUser);
   }
 
