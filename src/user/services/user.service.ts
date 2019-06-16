@@ -6,9 +6,11 @@ import { JwtPayload } from './interfaces/jwtPayload.interface';
 import * as jwt from 'jsonwebtoken';
 import * as querystring from 'querystring';
 import * as cheerio from 'cheerio';
-import moment from 'moment';
+import * as moment from 'moment';
 import { map } from 'rxjs/operators';
 import { CourseService } from '../../course/services/course.service';
+import { SendbirdService } from '../../sendbird/sendbird.service';
+import { UserInfoDTO } from '../controllers/dto/UserInfo.dto';
 
 @Injectable()
 export class UserService {
@@ -16,12 +18,18 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly courseService: CourseService,
+    private readonly sendBirdService: SendbirdService,
     private readonly httpService: HttpService,
   ) {
   }
 
-  async getUser(id: string): Promise<User> {
-    return await this.userRepository.findOne(id);
+  async getUser(userId: string): Promise<UserInfoDTO> {
+    const { id, name, sendbird_access_token } = await this.userRepository.findOne(userId);
+    const userInfoDTO = new UserInfoDTO();
+    userInfoDTO.id = id;
+    userInfoDTO.name = name;
+    userInfoDTO.sendbird_access_token = sendbird_access_token;
+    return userInfoDTO;
   }
 
   async getAllUser(): Promise<User[]> {
@@ -84,7 +92,7 @@ export class UserService {
    * @param password - 비밀번호
    */
   async requestToPLMS(id, password): Promise<string> {
-    const result = await this.httpService.request({
+    const result = (await this.httpService.request({
       method: 'post',
       url: 'https://onestop.pusan.ac.kr/new_pass/exorgan/exidentify.asp',
       data: querystring.stringify({
@@ -92,7 +100,7 @@ export class UserService {
         id,
         pswd: password,
       }),
-    });
+    }));
 
     return await (result.pipe(map(res => res.data)).toPromise());
   }
@@ -128,6 +136,12 @@ export class UserService {
     const newUser = new User();
     newUser.id = id;
     newUser.courses = await this.courseService.makeUserCourse(id);
+    newUser.name = await this.courseService.getUserName(id);
+    const createSendBirdUser = await this.sendBirdService.createUser(newUser.id, newUser.name);
+    newUser.sendbird_access_token = createSendBirdUser.access_token;
+    for (const course of newUser.courses) {
+      await this.sendBirdService.inviteMembersGroupChannel(createSendBirdUser.user_id, course.channel_url);
+    }
     return await this.userRepository.save(newUser);
   }
 

@@ -11,6 +11,12 @@ export class PlmsService {
   ) {
   }
 
+  async getUserName(id: string) {
+    const mainPageHTML = await this.getMainPageHTML(id);
+    const htmlSelector = cheerio.load(mainPageHTML);
+    return htmlSelector('li.user_department.hidden-xs').text();
+  }
+
   async getCourses(id: string) {
     const mainPageHTML = await this.getMainPageHTML(id);
     return this.getCoursesFromMainPage(mainPageHTML);

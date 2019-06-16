@@ -1,0 +1,40 @@
+version: '2.2'
+
+services:
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=28682061
+      - MYSQL_DATABASE=lab
+    ports:
+      - "5000:3306"
+    command: [mysqld, --character-set-server=utf8, --collation-server=utf8_general_ci]
+  web:
+    build: .
+    restart: always
+    environment:
+      - TOKEN_SECRETKEY=pnu
+      - SENDBIRD_APP_ID=454639A0-933D-46EF-9FBD-9BE865651392
+      - SENDBIRD_API_BASE_URL=https://api-454639A0-933D-46EF-9FBD-9BE865651392.sendbird.com/v3
+      - SENDBIRD_API_TOKEN=5d966f3fd59175c778fcd32f37394016f99fc32b
+      - TYPEORM_HOST=db
+      - TYPEORM_PORT=3306,
+      - TYPEORM_USERNAME=root
+      - TYPEORM_PASSWORD=28682061
+      - TYPEORM_DATABASE=lab
+      - TYPEORM_SYNCHRONIZE=true
+    command: [
+      "dockerize",
+      "-wait", "tcp://db:3306",
+      "-timeout", "3m",
+      "npx", "nodemon", "—watch", "'src/**/*.ts'", "—ignore", "'src/**/*.spec.ts'",
+      "—exec", "'ts-node'", "src/main.ts"
+    ]
+    ports:
+      - "4000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - db

@@ -5,6 +5,8 @@ import { LoginInfoDTO } from './dto/LoginInfo.dto';
 import { UserService } from '../services/user.service';
 import { User } from '../model/user.entity';
 import { AuthGuard } from '@nestjs/passport';
+import { CourseInfoDTO } from '../../course/controllers/dto/CourseInfo.dto';
+import { UserInfoDTO } from './dto/UserInfo.dto';
 
 @ApiUseTags('user')
 @Controller('user')
@@ -19,18 +21,17 @@ export class UserController {
     description: '로그인 되었습니다.',
   })
   async login(@Body() loginInfoDTO: LoginInfoDTO, @Res() res): Promise<void> {
-    console.log(loginInfoDTO);
     const { id, password } = loginInfoDTO;
     return res.status(HttpStatus.OK).json(await this.userService.login(id, password));
   }
 
-  @Get('user')
+  @Get()
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ title: '유저 정보' })
-  @ApiOkResponse({ description: 'Success!' })
+  @ApiOkResponse({ description: 'Success!', type: UserInfoDTO })
   @ApiForbiddenResponse({ description: 'Forbidden.' })
-  async getUser(@Req() req, @Res() res): Promise<User> {
+  async getUser(@Req() req, @Res() res): Promise<UserInfoDTO> {
     const { id } = req.user;
     return res.status(HttpStatus.OK).json(await this.userService.getUser(id));
   }

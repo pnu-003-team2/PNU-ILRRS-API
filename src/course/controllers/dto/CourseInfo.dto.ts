@@ -102,6 +102,11 @@ export class CourseInfoDTO {
   is_remote: boolean;
 
   @ApiModelProperty({
+    description: '강의 채팅 그룹 URL',
+  })
+  channel_url: string;
+
+  @ApiModelProperty({
     description: '수정일',
   })
   updated_at: Date;

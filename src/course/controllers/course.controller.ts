@@ -14,10 +14,16 @@ export class CourseController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ title: '현재 유저의 등록된 강의가져오기' })
-  @ApiOkResponse({ description: 'Success!' , type: [CourseInfoDTO]})
+  @ApiOkResponse({ description: 'Success!', type: [CourseInfoDTO] })
   @ApiForbiddenResponse({ description: 'Forbidden.' })
   async findUserCourses(@Req() req, @Res() res): Promise<CourseInfoDTO[]> {
     const { id } = req.user;
     return res.status(HttpStatus.OK).json(await this.courseService.findUserCourses(id));
+  }
+
+  @Get('init-sendbird')
+  @ApiOperation({ title: '(주의!) 샌드버드 초기화' })
+  async sendBirdInit(@Res() res) {
+    return res.status(HttpStatus.OK).json(await this.courseService.sendBirdInit());
   }
 }

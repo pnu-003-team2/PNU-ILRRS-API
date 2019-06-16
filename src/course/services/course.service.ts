@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import courseJSON from '../model/pnu2019_1st.json';
 import { CourseJSON } from './interface/CourseJSON';
 import { Course } from '../model/course.entity';
 import { Repository } from 'typeorm';
@@ -9,11 +8,13 @@ import { PlmsService } from './plms.service';
 import { CourseInfo } from './interface/CourseInfo';
 import { User } from '../../user/model/user.entity';
 import { CourseInfoDTO } from '../controllers/dto/CourseInfo.dto';
+import { SendbirdService } from '../../sendbird/sendbird.service';
 
 @Injectable()
 export class CourseService {
   constructor(
     private readonly plmsService: PlmsService,
+    private readonly sendBirdService: SendbirdService,
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
     @InjectRepository(User)
@@ -23,7 +24,7 @@ export class CourseService {
 
   async findUserCourses(id: string): Promise<CourseInfoDTO[]> {
     const user = await this.userRepository.findOne(id, { relations: ['courses'] });
-    const {courses} = user;
+    const { courses } = user;
     return courses.map(course => this.makeCourseInfoDTO(course));
   }
 
@@ -32,7 +33,7 @@ export class CourseService {
       id, uni_name, depart_code, depart_name, grade, class_code,
       code, class_name, class_eng_name, class_division, score, theory,
       lab, professor_depart, professor_name, limit_person, time_table,
-      liberal_name, is_native, is_remote, updated_at, created_at, version,
+      liberal_name, is_native, is_remote, channel_url, updated_at, created_at, version,
     } = course;
     const courseInfoDTO = new CourseInfoDTO();
     courseInfoDTO.id = id;
@@ -55,10 +56,15 @@ export class CourseService {
     courseInfoDTO.liberal_name = liberal_name;
     courseInfoDTO.is_native = is_native;
     courseInfoDTO.is_remote = is_remote;
+    courseInfoDTO.channel_url = channel_url;
     courseInfoDTO.updated_at = updated_at;
     courseInfoDTO.created_at = created_at;
     courseInfoDTO.version = version;
     return courseInfoDTO;
+  }
+
+  async getUserName(id: string): Promise<string> {
+    return await this.plmsService.getUserName(id);
   }
 
   async makeUserCourse(id: string): Promise<Course[]> {
@@ -75,36 +81,58 @@ export class CourseService {
       .getOne();
   }
 
-  async importCourseJSONToDatabase() {
-    console.log('JSON 데이터 Import 시작...');
-    const courses: CourseJSON[] = courseJSON;
-    courses.forEach(async (course, index) => {
-      const {
-        uni_name, depart_code, depart_name, grade, class_code, code, class_name, class_eng_name, class_division, score, theory,
-        lab, professor_depart, professor_name, limit_person, time_table, liberal_name, is_native, is_remote,
-      } = course;
-      const newCourse = new Course();
-      newCourse.uni_name = uni_name;
-      newCourse.depart_code = depart_code;
-      newCourse.depart_name = depart_name;
-      newCourse.grade = grade;
-      newCourse.class_code = class_code;
-      newCourse.code = code;
-      newCourse.class_name = class_name;
-      newCourse.class_eng_name = class_eng_name;
-      newCourse.class_division = class_division;
-      newCourse.score = score;
-      newCourse.theory = theory;
-      newCourse.lab = lab;
-      newCourse.professor_depart = professor_depart;
-      newCourse.professor_name = professor_name;
-      newCourse.limit_person = limit_person;
-      newCourse.time_table = time_table;
-      newCourse.liberal_name = liberal_name;
-      newCourse.is_native = is_native;
-      newCourse.is_remote = is_remote === 'Y';
-      await this.courseRepository.save(newCourse);
-      console.log(`진행률 : ${((index / courses.length) * 100).toFixed(2)}%`);
-    });
+  async createAllCourseChannel() {
+    const allCourses = await this.courseRepository.find({ where: { channel_url: '' } });
+    for (const i in allCourses) {
+      try {
+        const { class_name, code } = allCourses[i];
+        const courseChannelName = `${class_name} - ${code}분반`;
+        const result = await this.sendBirdService.createGroupChannel(courseChannelName, 'course');
+        console.log(`[${result.name}] 채널 생성 완료! (${i}/${allCourses.length})`);
+        allCourses[i].channel_url = result.channel_url;
+        await this.courseRepository.save(allCourses[i]);
+      } catch (e) {
+        console.log(e);
+        break;
+      }
+    }
+  }
+
+  // async importCourseJSONToDatabase() {
+  //   console.log('JSON 데이터 Import 시작...');
+  //   const courses: CourseJSON[] = courseJSON;
+  //   courses.forEach(async (course, index) => {
+  //     const {
+  //       uni_name, depart_code, depart_name, grade, class_code, code, class_name, class_eng_name, class_division, score, theory,
+  //       lab, professor_depart, professor_name, limit_person, time_table, liberal_name, is_native, is_remote,
+  //     } = course;
+  //     const newCourse = new Course();
+  //     newCourse.uni_name = uni_name;
+  //     newCourse.depart_code = depart_code;
+  //     newCourse.depart_name = depart_name;
+  //     newCourse.grade = grade;
+  //     newCourse.class_code = class_code;
+  //     newCourse.code = code;
+  //     newCourse.class_name = class_name;
+  //     newCourse.class_eng_name = class_eng_name;
+  //     newCourse.class_division = class_division;
+  //     newCourse.score = score;
+  //     newCourse.theory = theory;
+  //     newCourse.lab = lab;
+  //     newCourse.professor_depart = professor_depart;
+  //     newCourse.professor_name = professor_name;
+  //     newCourse.limit_person = limit_person;
+  //     newCourse.time_table = time_table;
+  //     newCourse.liberal_name = liberal_name;
+  //     newCourse.is_native = is_native;
+  //     newCourse.is_remote = is_remote === 'Y';
+  //     await this.courseRepository.save(newCourse);
+  //     console.log(`진행률 : ${((index / courses.length) * 100).toFixed(2)}%`);
+  //   });
+  // }
+
+  async sendBirdInit() {
+    await this.sendBirdService.sendBirdInit();
+    return '성공!';
   }
 }

@@ -8,6 +8,7 @@ import { JwtStrategy } from './services/jwt.strategy';
 import { CourseService } from '../course/services/course.service';
 import { PlmsService } from '../course/services/plms.service';
 import { Course } from '../course/model/course.entity';
+import { SendbirdService } from '../sendbird/sendbird.service';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { Course } from '../course/model/course.entity';
     HttpModule,
   ],
   controllers: [UserController],
-  providers: [UserService, CourseService, PlmsService, JwtStrategy],
+  providers: [UserService, CourseService, PlmsService, SendbirdService, JwtStrategy],
 })
 export class UserModule {
 }

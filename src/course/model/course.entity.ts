@@ -90,9 +90,13 @@ export class Course {
   @Column()
   is_remote: boolean;
 
+  // SendBird Channel Url
+  @Column()
+  channel_url: string;
+
   @ManyToMany(type => User, user => user.courses)
   users: User[];
-
+  //
   @UpdateDateColumn()
   updated_at: Date;
 
